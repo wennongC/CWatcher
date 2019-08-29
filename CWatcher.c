@@ -94,8 +94,8 @@ void getArguments(Arguments* ptr) {
 }
 
 void freeArgMemory(Arguments* ptr) {
-    free(ptr->filenames);
-    free(ptr->options);
+    if (ptr->fileNum != 0) free(ptr->filenames);
+    if (ptr->optionNum != 0) free(ptr->options);
 }
 
 // Print out all the arguments
