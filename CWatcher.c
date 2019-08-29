@@ -17,11 +17,12 @@ typedef struct {
     char **argv;
 } Arguments;
 
-// Record the Operating System. 1 for Linux, 2 for Darwin(MacOS), 0 for unknown
+// Record the Operating System. 1 for Linux, 2 for Darwin(MacOS); 0 for unknown
 int OS = 0;
 
 void help();
 void getArguments(Arguments*);
+void freeArgMemory(Arguments*);
 void printArguments(Arguments*);
 int detectOS();
 int detectModify();
@@ -33,11 +34,14 @@ int main(int argc, char **argv) {
     bundle.argv = argv;
     getArguments(&bundle);
     printArguments(&bundle);
-    if (detectOS()) return 1;
+    // check the OS name
+    if (detectOS()) {
+        freeArgMemory(&bundle);
+        return 1;
+    }
 
     // Free memory that been allocated inside "getArguments" function
-    free(bundle.filenames);
-    free(bundle.options);
+    freeArgMemory(&bundle);
     return 0;
 }
 
@@ -89,6 +93,11 @@ void getArguments(Arguments* ptr) {
     free(options);
 }
 
+void freeArgMemory(Arguments* ptr) {
+    free(ptr->filenames);
+    free(ptr->options);
+}
+
 // Print out all the arguments
 void printArguments(Arguments* ptr) {
     printf("The filenames arguments contains: \n");
@@ -105,7 +114,7 @@ void printArguments(Arguments* ptr) {
 
 // This function is only used by detectOS()
 void detectOSErrorMsg() {
-    fprintf(stderr, "ERROR >>> Unable to get the operating system version\n");
+    fprintf(stderr, "ERROR >>> Unable to get the operating system name\n");
     fprintf(stderr, "ERROR >>> Please note that this program only support Darwin(MacOS) and Linux currently.\n");
 }
 // Test the Operating System
@@ -120,12 +129,12 @@ int detectOS() {
     }
 
     if (fgets(buf, BUFSIZE, fp) != NULL) {
+        int length = strlen(buf);
         printf("Operating System Detected >>> %s \n", buf);
-        // Test if the compare equals 10 rather than 0, because the buf is longer than the OS name
-        if (strcmp(buf, "Linux")==10) {
+        if ( length>=5 &&buf[0]=='L'&&buf[1]=='i'&&buf[2]=='n'&&buf[3]=='u'&&buf[4]=='x') {
             OS = 1;
             printf("Linux Found!\n");
-        } else if (strcmp(buf, "Darwin")==10) {
+        } else if ( length>=6 &&buf[0]=='D'&&buf[1]=='a'&&buf[2]=='r'&&buf[3]=='w'&&buf[4]=='i'&&buf[5]=='n') {
             OS = 2;
             printf("Darwin Found!\n");
         } else {
