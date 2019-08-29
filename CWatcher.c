@@ -2,7 +2,6 @@
 *   Program Name: CWatcher
 *   Author: Wennong Cai
 *   Created At: August 26th, 2019
-*   
 */
 
 #include <stdio.h>
@@ -18,17 +17,23 @@ typedef struct {
     char **argv;
 } Arguments;
 
+// Record the Operating System. 1 for Linux, 2 for Darwin(MacOS), 0 for unknown
+int OS = 0;
+
 void help();
 void getArguments(Arguments*);
 void printArguments(Arguments*);
+int detectOS();
 int detectModify();
 
 int main(int argc, char **argv) {
+    // pre-process
     Arguments bundle;
     bundle.argc = argc;
     bundle.argv = argv;
     getArguments(&bundle);
     printArguments(&bundle);
+    if (detectOS()) return 1;
 
     // Free memory that been allocated inside "getArguments" function
     free(bundle.filenames);
@@ -38,7 +43,7 @@ int main(int argc, char **argv) {
 
 // Display the help documentation in the console 
 void help() {
-
+    // Wait to be coded
 }
 
 // Get all arguments from the input
@@ -98,8 +103,48 @@ void printArguments(Arguments* ptr) {
     printf("\n");
 }
 
+// This function is only used by detectOS()
+void detectOSErrorMsg() {
+    fprintf(stderr, "ERROR >>> Unable to get the operating system version\n");
+    fprintf(stderr, "ERROR >>> Please note that this program only support Darwin(MacOS) and Linux currently.\n");
+}
+// Test the Operating System
+// Return 1 means error occurred.
+int detectOS() {
+    const int BUFSIZE = 32;
+    char buf[BUFSIZE];
+    FILE *fp;
+    if ((fp = popen("uname", "r")) == NULL) {
+        detectOSErrorMsg();
+        return 1;
+    }
+
+    if (fgets(buf, BUFSIZE, fp) != NULL) {
+        printf("Operating System Detected >>> %s \n", buf);
+        // Test if the compare equals 10 rather than 0, because the buf is longer than the OS name
+        if (strcmp(buf, "Linux")==10) {
+            OS = 1;
+            printf("Linux Found!\n");
+        } else if (strcmp(buf, "Darwin")==10) {
+            OS = 2;
+            printf("Darwin Found!\n");
+        } else {
+            detectOSErrorMsg();
+            return 1;
+        }
+    }
+
+    if(pclose(fp))  {
+        detectOSErrorMsg();
+        return 1;
+    }
+    return 0;
+}
+
 // Detect if the file has been modified.
 // Return 1 if the file did be modified, otherwise 0. 
 int detectModify() {
+    
+    //Wait to be coded
     return 0;
 }
