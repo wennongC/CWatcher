@@ -17,6 +17,12 @@ typedef struct {
     char **argv;
 } Arguments;
 
+typedef struct {
+    char *filename;
+    char *info;
+    char *lastModified;
+} FileItem;
+
 // Record the Operating System. 1 for Linux, 2 for Darwin(MacOS); 0 for unknown
 int OS = 0;
 
@@ -25,7 +31,7 @@ void getArguments(Arguments*);
 void freeArgMemory(Arguments*);
 void printArguments(Arguments*);
 int detectOS();
-int detectModify();
+int getFileInfo(FileItem*);
 
 int main(int argc, char **argv) {
     // pre-process
@@ -33,11 +39,24 @@ int main(int argc, char **argv) {
     bundle.argc = argc;
     bundle.argv = argv;
     getArguments(&bundle);
-    printArguments(&bundle);
-    // check the OS name
-    if (detectOS()) {
-        freeArgMemory(&bundle);
-        return 1;
+
+    if (bundle.fileNum > 0) {
+        printArguments(&bundle);
+    
+        if (detectOS()) {
+            // Failed to recognise the OS name
+            freeArgMemory(&bundle);
+            return 1;
+        }
+
+        FileItem *files = (FileItem*)malloc(sizeof(FileItem) * bundle.fileNum);
+        for (int i = 0; i < bundle.fileNum; i++) {
+            files[i].filename = bundle.filenames[i];
+            getFileInfo(&files[i]);
+        }
+        free(files);
+    } else {
+        help();
     }
 
     // Free memory that been allocated inside "getArguments" function
@@ -48,6 +67,7 @@ int main(int argc, char **argv) {
 // Display the help documentation in the console 
 void help() {
     // Wait to be coded
+    printf("Thanks for using the CWatcher program\n");
 }
 
 // Get all arguments from the input
@@ -139,21 +159,73 @@ int detectOS() {
             printf("Darwin Found!\n");
         } else {
             detectOSErrorMsg();
+            pclose(fp);
             return 1;
         }
     }
 
     if(pclose(fp))  {
-        detectOSErrorMsg();
+        fprintf(stderr, "WARNING >>> File closing is encountering some problems\n");
         return 1;
     }
     return 0;
 }
 
-// Detect if the file has been modified.
-// Return 1 if the file did be modified, otherwise 0. 
-int detectModify() {
-    
-    //Wait to be coded
-    return 0;
+// Get information of a specified file
+// Return -1 means error
+int getFileInfo(FileItem* item_ptr) {
+    const int BUFSIZE = 128;
+    char buf[BUFSIZE];
+    FILE *fp;
+    char *filename = item_ptr->filename;
+    int retVal = 0;
+
+    // Try to get the FileSystem list first by using command 'ls'
+    if ((fp = popen("ls -l", "r")) == NULL) {
+        fprintf(stderr, "ERROR >>> Unable to access file system\n");
+        return -1;
+    }
+
+    int fileFoundFlag = 0;
+    while (fgets(buf, BUFSIZE, fp) != NULL) {
+        // First check if the "buf" includes the filename or not
+        if (strstr(buf, filename) == NULL) continue;
+        else {
+            fileFoundFlag = 1; // Set it to 1 Temporarily, then do further check
+            int totalLength = strlen(buf) - 1;
+            int fileLength = strlen(filename);
+            /*
+                Debug part:
+                printf("OK >>> buf = %s\n", buf); printf("   >>> totalLength = %d\n", totalLength);
+                printf("OK >>> file = %s\n", filename); printf("   >>> fileLength = %d\n", fileLength);
+            */
+            for (int i = 0; i < fileLength; i++) {
+                if(buf[totalLength-fileLength+i] != filename[i]) {
+                    // if they are not exactly same filename
+                    fileFoundFlag = 0;
+                    break;
+                }
+            }
+        }
+        // If the exact same name file is found, terminate the while loop
+        if (fileFoundFlag) {
+            item_ptr->info = buf;
+            break;
+        };
+    }
+
+    if (fileFoundFlag) {
+        printf("OK >>> %s", item_ptr->info);
+    } else {
+        fprintf(stderr, "ERROR >>> Unable to find the file: %s\n", filename);
+        pclose(fp);
+        return -1;
+    }
+
+    if(pclose(fp))  {
+        fprintf(stderr, "WARNING >>> Failed to close file\n");
+        return -1;
+    }
+
+    return retVal;
 }
