@@ -27,11 +27,13 @@ typedef struct {
 int OS = 0;
 
 void help();
-void getArguments(Arguments*);
-void freeArgMemory(Arguments*);
-void printArguments(Arguments*);
-int detectOS();
-int getFileInfo(FileItem*);
+void getArguments(Arguments*);  // Analyse the arguments read from the user command line input
+void freeArgMemory(Arguments*); // clean out the memory allocation
+void printArguments(Arguments*); // For debuging use
+int detectOS(); // check the OS name
+int getFileInfo(FileItem*); // find the file info in 'ls -l' command
+int detectModify(FileItem*);
+int callCompiler(Arguments*);
 
 int main(int argc, char **argv) {
     // pre-process
@@ -49,12 +51,16 @@ int main(int argc, char **argv) {
             return 1;
         }
 
+        // Need to decide how many files will be watched
+
         FileItem *files = (FileItem*)malloc(sizeof(FileItem) * bundle.fileNum);
         for (int i = 0; i < bundle.fileNum; i++) {
             files[i].filename = bundle.filenames[i];
             getFileInfo(&files[i]);
         }
         free(files);
+
+        callCompiler(&bundle);
     } else {
         help();
     }
@@ -150,13 +156,13 @@ int detectOS() {
 
     if (fgets(buf, BUFSIZE, fp) != NULL) {
         int length = strlen(buf);
-        printf("Operating System Detected >>> %s \n", buf);
+        printf("Operating System Detected >>> %s ", buf);
         if ( length>=5 &&buf[0]=='L'&&buf[1]=='i'&&buf[2]=='n'&&buf[3]=='u'&&buf[4]=='x') {
             OS = 1;
-            printf("Linux Found!\n");
+            printf("CWatcher pre-process setting to >>> Linux\n");
         } else if ( length>=6 &&buf[0]=='D'&&buf[1]=='a'&&buf[2]=='r'&&buf[3]=='w'&&buf[4]=='i'&&buf[5]=='n') {
             OS = 2;
-            printf("Darwin Found!\n");
+            printf("CWatcher pre-process setting to >>> Darwin\n");
         } else {
             detectOSErrorMsg();
             pclose(fp);
@@ -172,13 +178,12 @@ int detectOS() {
 }
 
 // Get information of a specified file
-// Return -1 means error
+// Return -1 means error. 0 for success.
 int getFileInfo(FileItem* item_ptr) {
     const int BUFSIZE = 128;
     char buf[BUFSIZE];
     FILE *fp;
     char *filename = item_ptr->filename;
-    int retVal = 0;
 
     // Try to get the FileSystem list first by using command 'ls'
     if ((fp = popen("ls -l", "r")) == NULL) {
@@ -214,9 +219,7 @@ int getFileInfo(FileItem* item_ptr) {
         };
     }
 
-    if (fileFoundFlag) {
-        printf("OK >>> %s", item_ptr->info);
-    } else {
+    if (!fileFoundFlag) {
         fprintf(stderr, "ERROR >>> Unable to find the file: %s\n", filename);
         pclose(fp);
         return -1;
@@ -227,5 +230,37 @@ int getFileInfo(FileItem* item_ptr) {
         return -1;
     }
 
-    return retVal;
+    return 0;
+}
+
+// Detect if the file has been made modifed
+int detectModify(FileItem* items) {
+
+
+
+    return 0;
+}
+
+// Do the compile work
+int callCompiler(Arguments* ptr) {
+    if (ptr->fileNum == 0) return 1;
+
+    int filesLen = 0;
+    for (int i = 0; i < ptr->fileNum; i++) {
+        filesLen += strlen(ptr->filenames[i]);
+    }
+
+    char *cmd = (char*)malloc(sizeof(char) * (filesLen + ptr->fileNum + 4));
+    strcpy(cmd, "gcc ");
+    
+    for (int i = 0; i < ptr->fileNum; i++) {
+        strcat(cmd, ptr->filenames[i]);
+        strcat(cmd, " ");
+    }
+    
+    printf("Executing command >>> %s \n", cmd);
+    system(cmd);
+    free(cmd);
+    printf("\n==========\n\nComplie >>> Completed!\n\n==========\n\n");
+    return 0;
 }
