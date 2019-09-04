@@ -57,3 +57,12 @@ char* stringCopy(char* origin, int startIndex, int length) {
     dest[length] = '\0';
     return dest;
 }
+
+// This function will initialize all FileItem with NULL.
+void initFileItems(FileItem* items, int length) {
+    for (int i = 0; i < length; i++) {
+        items[i].filename = NULL;
+        items[i].info = NULL;
+        items[i].lastModified = NULL;
+    }
+}

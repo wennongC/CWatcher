@@ -8,21 +8,6 @@
 #include <stdio.h>
 #include "CW_util.h"
 
-typedef struct {
-    char **filenames;
-    int fileNum;
-    char **options;
-    int optionNum;
-    int argc;
-    char **argv;
-} Arguments;
-
-typedef struct {
-    char *filename;
-    char *info;
-    char *lastModified;
-} FileItem;
-
 // Record the Operating System. 1 for Linux, 2 for Darwin(MacOS); 0 for unknown
 int OS = 0;
 
@@ -37,8 +22,15 @@ int detectModify(Arguments*, FileItem*);
 int callCompiler(Arguments*);
 
 int main(int argc, char **argv) {
-    // pre-process
-    Arguments bundle;
+    // pre-process. Initialize the Arguments structure
+    Arguments bundle = { 
+        .filenames = NULL,
+        .fileNum = 0,
+        .options = NULL,
+        .optionNum = 0,
+        .argc = 0,
+        .argv = NULL,
+    };
     bundle.argc = argc;
     bundle.argv = argv;
     getArguments(&bundle);
@@ -55,6 +47,7 @@ int main(int argc, char **argv) {
         // <<< Need to decide how many files will be watched here >>>
 
         FileItem *files = (FileItem*)malloc(sizeof(FileItem) * bundle.fileNum);
+        initFileItems(files, bundle.fileNum);
         
         while (1) {
             int result = detectModify(&bundle, files);
@@ -298,6 +291,7 @@ int detectModify(Arguments* ptr, FileItem* files) {
             free(temp);
         } else {
             fprintf(stderr, "ERROR >>> Filenames did not match the monitor record\n");
+            return -1;
         }
     }
 
