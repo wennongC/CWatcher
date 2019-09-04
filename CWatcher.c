@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
             printf("Detect Result >>> %d \n", result);
             fflush(stdout);
             if (result == -1) break;
-            else sleep(5);
+            else sleep(2);
         }
 
         free(files);
@@ -160,7 +160,7 @@ int detectOS() {
 
     if (fgets(buf, BUFSIZE, fp) != NULL) {
         int length = strlen(buf);
-        printf("Operating System Detected >>> %s ", buf);
+        printf("Operating System Detected >>> %s", buf);
         if ( length>=5 &&buf[0]=='L'&&buf[1]=='i'&&buf[2]=='n'&&buf[3]=='u'&&buf[4]=='x') {
             OS = 1;
             printf("CWatcher pre-process setting to >>> Linux\n");
@@ -255,11 +255,10 @@ int getLastModified(FileItem* item_ptr) {
 
     while (fgets(buf, BUFSIZE, fp) != NULL) {
         if (OS == 1) { // Linux
-
-
-
-
-
+            if (item_ptr->lastModified != NULL) free(item_ptr->lastModified);// Clean the memory allocation first
+            item_ptr->lastModified = getLastModifyOnLinux(buf); // try to get lastModify information
+            if (item_ptr->lastModified == NULL) continue;
+            else break;
         } else if (OS == 2) { // Mac
             if (item_ptr->lastModified != NULL) free(item_ptr->lastModified);// Clean the memory allocation first
             item_ptr->lastModified = getLastModifyOnMac(buf);

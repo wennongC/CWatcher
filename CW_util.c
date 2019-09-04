@@ -32,13 +32,15 @@ char* getLastModifyOnMac(char* string) {
 
     if (startIndex != 0 && endIndex != 0) {
         int length = endIndex - startIndex + 1;
-        char* lastModify = stringCopy(string, startIndex, length);
-        return lastModify;
+        return stringCopy(string, startIndex, length);
     } else return "ERROR";
 }
 
 char* getLastModifyOnLinux(char* string) {
-    return "";
+    if (string[0]=='M'&&string[1]=='o'&&string[2]=='d'&&string[3]=='i'&&string[4]=='f'&&string[5]=='y'){
+        // start from index 8 because the first 8 characters are "Modify: "
+        return stringCopy(string, 8, strlen(string)-8);
+    } else return NULL;
 }
 
 // copy part of the origin string into a new string.
