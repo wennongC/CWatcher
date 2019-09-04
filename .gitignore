@@ -1,7 +1,10 @@
 # test files
-test
-test.c
+test*
 a.out
+*.gch
+
+# code editor setting
+.vscode
 
 # compiled executable file
 CWatcher

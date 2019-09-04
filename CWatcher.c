@@ -4,9 +4,9 @@
 *   Created At: August 26th, 2019
 */
 
+#include <unistd.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "CW_util.h"
 
 typedef struct {
     char **filenames;
@@ -32,7 +32,8 @@ void freeArgMemory(Arguments*); // clean out the memory allocation
 void printArguments(Arguments*); // For debuging use
 int detectOS(); // check the OS name
 int getFileInfo(FileItem*); // find the file info in 'ls -l' command
-int detectModify(FileItem*);
+int getLastModified(FileItem*); // find LastModified of a file in 'stat' command
+int detectModify(Arguments*, FileItem*);
 int callCompiler(Arguments*);
 
 int main(int argc, char **argv) {
@@ -51,16 +52,19 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        // Need to decide how many files will be watched
+        // <<< Need to decide how many files will be watched here >>>
 
         FileItem *files = (FileItem*)malloc(sizeof(FileItem) * bundle.fileNum);
-        for (int i = 0; i < bundle.fileNum; i++) {
-            files[i].filename = bundle.filenames[i];
-            getFileInfo(&files[i]);
+        
+        while (1) {
+            int result = detectModify(&bundle, files);
+            printf("Detect Result >>> %d \n", result);
+            fflush(stdout);
+            if (result == -1) break;
+            else sleep(5);
         }
-        free(files);
 
-        callCompiler(&bundle);
+        free(files);
     } else {
         help();
     }
@@ -179,6 +183,10 @@ int detectOS() {
 
 // Get information of a specified file
 // Return -1 means error. 0 for success.
+/*
+*   <<< Consider using 'stat' in this function to extract "Last Data modification"
+*   <<< In MacOS, Four date components in 'stat' are "Last access", "Last modification", "Last status change", "CreateAt" >>>
+*/
 int getFileInfo(FileItem* item_ptr) {
     const int BUFSIZE = 128;
     char buf[BUFSIZE];
@@ -197,13 +205,9 @@ int getFileInfo(FileItem* item_ptr) {
         if (strstr(buf, filename) == NULL) continue;
         else {
             fileFoundFlag = 1; // Set it to 1 Temporarily, then do further check
-            int totalLength = strlen(buf) - 1;
+            int totalLength = strlen(buf) - 1; 
             int fileLength = strlen(filename);
-            /*
-                Debug part:
-                printf("OK >>> buf = %s\n", buf); printf("   >>> totalLength = %d\n", totalLength);
-                printf("OK >>> file = %s\n", filename); printf("   >>> fileLength = %d\n", fileLength);
-            */
+
             for (int i = 0; i < fileLength; i++) {
                 if(buf[totalLength-fileLength+i] != filename[i]) {
                     // if they are not exactly same filename
@@ -212,9 +216,13 @@ int getFileInfo(FileItem* item_ptr) {
                 }
             }
         }
-        // If the exact same name file is found, terminate the while loop
+        // If the exact same name file is found, extract the information from "stat"
+        // and then terminate the while loop
         if (fileFoundFlag) {
-            item_ptr->info = buf;
+            if (item_ptr->info != NULL) free(item_ptr->info);// Clean the memory allocation first
+            item_ptr->info = stringCopy(buf, 0, strlen(buf));
+            int result = getLastModified(item_ptr);
+            if (result == -1) return -1;
             break;
         };
     }
@@ -225,20 +233,76 @@ int getFileInfo(FileItem* item_ptr) {
         return -1;
     }
 
-    if(pclose(fp))  {
-        fprintf(stderr, "WARNING >>> Failed to close file\n");
-        return -1;
-    }
-
+    pclose(fp);
     return 0;
 }
 
-// Detect if the file has been made modifed
-int detectModify(FileItem* items) {
+// Extract the last modified information from a existing file,
+// Return -1 for error
+int getLastModified(FileItem* item_ptr) {
+    const int BUFSIZE = 1024;
+    char buf[BUFSIZE];
+    FILE *fp;
+    char *cmd = (char*)malloc(sizeof(char) * (strlen(item_ptr->filename) + 5));
+    strcpy(cmd, "stat ");
+    strcat(cmd, item_ptr->filename);
+    // Try to get the file status first by using command 'stat'
+    if ((fp = popen(cmd, "r")) == NULL) {
+        fprintf(stderr, "ERROR >>> Unable to access file system\n");
+        return -1;
+    }
+    free(cmd);
+
+    while (fgets(buf, BUFSIZE, fp) != NULL) {
+        if (OS == 1) { // Linux
 
 
 
+
+
+        } else if (OS == 2) { // Mac
+            if (item_ptr->lastModified != NULL) free(item_ptr->lastModified);// Clean the memory allocation first
+            item_ptr->lastModified = getLastModifyOnMac(buf);
+            break;
+        } else {
+            fprintf(stderr, "ERROR >>> Unable to access file system\n");
+            return -1;
+        }
+    }
     return 0;
+}
+
+/*
+*   Detect if the file has been made modifed.
+*   The second argument is an array containing all files to be watched.
+*   This function returns 1 if there changed in file, and returns 0 for non-changed.
+*       Return -1 for Error occurred.
+*/
+int detectModify(Arguments* ptr, FileItem* files) {
+    int detected = 0; // Default value is "not changed"
+    for (int i = 0; i < ptr->fileNum; i++) {
+        if (files[i].filename == NULL) {
+            files[i].filename = ptr->filenames[i];
+            if (getFileInfo(&files[i]) == -1) return -1;
+            detected = 1; // The file initial process always involves changes
+        } else if (strcmp(files[i].filename, ptr->filenames[i]) == 0) {
+            // save the last information into a temporary variable, then Update the file information
+            int length = strlen(files[i].info);
+            char *temp = stringCopy(files[i].info, 0, strlen(files[i].info));
+
+            if (getFileInfo(&files[i]) == -1) return -1;
+
+            if (strcmp(temp, files[i].info) != 0) {
+                printf("file modification detected >>> Starting to re-compile the program...\n");
+                detected = 1;
+            }
+            free(temp);
+        } else {
+            fprintf(stderr, "ERROR >>> Filenames did not match the monitor record\n");
+        }
+    }
+
+    return detected;
 }
 
 // Do the compile work
