@@ -258,9 +258,11 @@ int getLastModified(FileItem* item_ptr) {
             break;
         } else {
             fprintf(stderr, "ERROR >>> Unable to access file system\n");
+            pclose(fp);
             return -1;
         }
     }
+    pclose(fp);
     return 0;
 }
 
