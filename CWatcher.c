@@ -236,7 +236,7 @@ int getLastModified(FileItem* item_ptr) {
     const int BUFSIZE = 1024;
     char buf[BUFSIZE];
     FILE *fp;
-    char *cmd = (char*)malloc(sizeof(char) * (strlen(item_ptr->filename) + 5));
+    char *cmd = (char*)malloc(sizeof(char) * (strlen(item_ptr->filename) + 6));
     strcpy(cmd, "stat ");
     strcat(cmd, item_ptr->filename);
     // Try to get the file status first by using command 'stat'
@@ -274,7 +274,7 @@ int detectModify(Arguments* ptr, FileItem* files) {
     int detected = 0; // Default value is "not changed"
     for (int i = 0; i < ptr->fileNum; i++) {
         if (files[i].filename == NULL) {
-            files[i].filename = ptr->filenames[i];
+            files[i].filename = stringCopy(ptr->filenames[i], 0, strlen(ptr->filenames[i]));
             if (getFileInfo(&files[i]) == -1) return -1;
             detected = 1; // The file initial process always involves changes
         } else if (strcmp(files[i].filename, ptr->filenames[i]) == 0) {
