@@ -5,8 +5,9 @@
 */
 
 #include <unistd.h>
-#include <stdio.h>
+
 #include "CW_util.h"
+#include "CW_compiler.h"
 
 // Record the Operating System. 1 for Linux, 2 for Darwin(MacOS); 0 for unknown
 int OS = 0;
@@ -14,12 +15,10 @@ int OS = 0;
 void help();
 void getArguments(Arguments*);  // Analyse the arguments read from the user command line input
 void freeArgMemory(Arguments*); // clean out the memory allocation
-void printArguments(Arguments*); // For debuging use
 int detectOS(); // check the OS name
 int getFileInfo(FileItem*); // find the file info in 'ls -l' command
 int getLastModified(FileItem*); // find LastModified of a file in 'stat' command
 int detectModify(Arguments*, FileItem*);
-int callCompiler(Arguments*);
 
 int main(int argc, char **argv) {
     // pre-process. Initialize the Arguments structure
@@ -44,14 +43,17 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        // <<< Need to decide how many files will be watched here >>>
+        // <<< Need to decide how many files will be watched here (i.e. Search for C header files automatically) >>>
 
         FileItem *files = (FileItem*)malloc(sizeof(FileItem) * bundle.fileNum);
         initFileItems(files, bundle.fileNum);
         
         while (1) {
             int result = detectModify(&bundle, files);
-            printf("Detect Result >>> %d \n", result);
+            // printf("Detect Result >>> %d \n", result);
+            if (result == 1) {
+                callCompiler(&bundle);
+            }
             fflush(stdout);
             if (result == -1) break;
             else sleep(2);
@@ -71,6 +73,10 @@ int main(int argc, char **argv) {
 void help() {
     // Wait to be coded
     printf("Thanks for using the CWatcher program\n");
+    printf("Compile this program first by using C compiler such as GCC\n");
+    printf("Usage:      ./CWatcher <filename> [<filenames>...] [options]\n");
+    printf("Arguments:  enter all filenames you want to monitor for changes, separated by space\n");
+    printf("Options:    -cpp    Using C++ compiler to compiler the program (Default is C compiler\n");
 }
 
 // Get all arguments from the input
@@ -119,20 +125,6 @@ void getArguments(Arguments* ptr) {
 void freeArgMemory(Arguments* ptr) {
     if (ptr->fileNum != 0) free(ptr->filenames);
     if (ptr->optionNum != 0) free(ptr->options);
-}
-
-// Print out all the arguments
-void printArguments(Arguments* ptr) {
-    printf("The filenames arguments contains: \n");
-    for(int i = 0; i < ptr->fileNum; i++) {
-        printf("| %s |", ptr->filenames[i]);
-    }
-
-    printf("\nThe options arguments contains: \n");
-    for(int i = 0; i < ptr->optionNum; i++) {
-        printf("| %s |", ptr->options[i]);
-    }
-    printf("\n");
 }
 
 // This function is only used by detectOS()
@@ -298,28 +290,4 @@ int detectModify(Arguments* ptr, FileItem* files) {
     }
 
     return detected;
-}
-
-// Do the compile work
-int callCompiler(Arguments* ptr) {
-    if (ptr->fileNum == 0) return 1;
-
-    int filesLen = 0;
-    for (int i = 0; i < ptr->fileNum; i++) {
-        filesLen += strlen(ptr->filenames[i]);
-    }
-
-    char *cmd = (char*)malloc(sizeof(char) * (filesLen + ptr->fileNum + 4));
-    strcpy(cmd, "gcc ");
-    
-    for (int i = 0; i < ptr->fileNum; i++) {
-        strcat(cmd, ptr->filenames[i]);
-        strcat(cmd, " ");
-    }
-    
-    printf("Executing command >>> %s \n", cmd);
-    system(cmd);
-    free(cmd);
-    printf("\n==========\n\nComplie >>> Completed!\n\n==========\n\n");
-    return 0;
 }

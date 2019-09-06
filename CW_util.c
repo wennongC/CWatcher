@@ -1,7 +1,19 @@
 #include "CW_util.h"
 #include <assert.h>
 
-#include<stdio.h>
+// Print out all the arguments
+void printArguments(Arguments* ptr) {
+    printf("The filenames arguments contains: \n");
+    for(int i = 0; i < ptr->fileNum; i++) {
+        printf("| %s |", ptr->filenames[i]);
+    }
+
+    printf("\nThe options arguments contains: \n");
+    for(int i = 0; i < ptr->optionNum; i++) {
+        printf("| %s |", ptr->options[i]);
+    }
+    printf("\n");
+}
 
 // designed for MacOS stat command
 // The second date argument is the LastModified date

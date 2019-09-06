@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 typedef struct {
     char **filenames;
@@ -18,6 +19,8 @@ typedef struct {
     char *info;
     char *lastModified;
 } FileItem;
+
+void printArguments(Arguments*); // For debuging use
 
 char* getLastModifyOnMac(char* string);
 
